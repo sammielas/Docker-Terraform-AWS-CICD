@@ -1,7 +1,7 @@
 # environment variables
-region       = us-east-1
-project_name = rentzone
-environment  = development
+region       = "us-east-1"
+project_name = "rentzone"
+environment  = "development"
 
 # vpc variables
 vpc_cidr                     = "10.0.0.0/16"
@@ -13,26 +13,26 @@ private_data_subnet_az1_cidr = "10.0.4.0/24"
 private_data_subnet_az2_cidr = "10.0.5.0/24"
 
 # secrets manager variables
-secrets_manager_secret_name = 
+secrets_manager_secret_name = "rentzone-app-dev-secrets"//create secret in Secret manager console
 
 # rds variables
-multi_az_deployment          = 
-database_instance_identifier = 
-database_instance_class      = 
-publicly_accessible          = 
+multi_az_deployment          = "false"
+database_instance_identifier = "app-db"
+database_instance_class      = "db.t2 .micro"
+publicly_accessible          = "false"
 
 # acm variables
-domain_name       = 
-alternative_names = 
+domain_name       = "sammielas.com"
+alternative_names = "*.sammielas.com"
 
 # s3 variables
-env_file_bucket_name = 
-env_file_name        = 
+env_file_bucket_name = "a-rentzone-app-env-file-bucket2024"
+env_file_name        = "env-variables-file.env"
 
 # ecs variables
 architecture = "X86_64"
-image_name   = 
-image_tag    = 
+image_name   = "rentzone-app"
+image_tag    = "v1"
 
 # route-53 variables
-record_name = 
+record_name = "www"
