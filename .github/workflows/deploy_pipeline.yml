@@ -44,7 +44,7 @@ jobs:
 
       - name: Run Terraform apply/destroy
         working-directory: ./iac
-        run: terraform ${{ env.TERRAFORM_ACTION }} --auto-approve
+        run: terraform ${{ env.TERRAFORM_ACTION }} -auto-approve
 
       - name: Get Terraform output image name
         if: env.TERRAFORM_ACTION == 'apply'
@@ -125,7 +125,7 @@ jobs:
 
       - name: Print GITHUB_ENV contents
         run: cat $GITHUB_ENV
-        
+
 
     outputs:
       terraform_action: ${{ env.TERRAFORM_ACTION }}
