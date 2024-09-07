@@ -1,7 +1,7 @@
 # configure aws provider to establish a secure connection between terraform and aws
 provider "aws" {
   region  = var.region
-  profile = "teraaform-user"
+  profile = "terraform-user"
 
   default_tags {
     tags = {
