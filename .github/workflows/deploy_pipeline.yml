@@ -197,7 +197,7 @@ jobs:
       - name: Start EC2 runner
         if: env.runner-running != 'true'
         id: start-ec2-runner
-        uses: machulav/ec2-github-runner@v1
+        uses: machulav/ec2-github-runner@v2.3.6
         with:
           mode: start
           github-token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
