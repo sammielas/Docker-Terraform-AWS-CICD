@@ -8,11 +8,12 @@ env:
   AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
   AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
   AWS_REGION: us-east-1
-  TERRAFORM_ACTION: destroy
-  GITHUB_USERNAME: sammielas
+  TERRAFORM_ACTION: destroy 
+  GITHUB_USERNAME: georgeonalo
   REPOSITORY_NAME: application-codes
   WEB_FILE_ZIP: rentzone.zip
   WEB_FILE_UNZIP: rentzone
+  FLYWAY_VERSION: 10.16.0
 
 
 jobs:
@@ -21,7 +22,7 @@ jobs:
     name: Configure AWS credentials
     runs-on: ubuntu-latest
     steps:
-      - name: Configure AWS credentials
+      - name: Configure AWS credentials 
         uses: aws-actions/configure-aws-credentials@v1-node16
         with:
           aws-access-key-id: ${{ env.AWS_ACCESS_KEY_ID }}
@@ -41,7 +42,7 @@ jobs:
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v2
         with:
-          terraform_version: 1.9.2
+          terraform_version: 1.1.7
 
       - name: Run Terraform initialize
         working-directory: ./iac
@@ -131,7 +132,6 @@ jobs:
       - name: Print GITHUB_ENV contents
         run: cat $GITHUB_ENV
 
-
     outputs:
       terraform_action: ${{ env.TERRAFORM_ACTION }}
       image_name: ${{ env.IMAGE_NAME }}
@@ -145,7 +145,6 @@ jobs:
       ecs_service_name: ${{ env.ECS_SERVICE_NAME }}
       environment_file_name: ${{ env.ENVIRONMENT_FILE_NAME }}
       env_file_bucket_name: ${{ env.ENV_FILE_BUCKET_NAME }}
-
 
 
   # Create ECR repository
@@ -173,7 +172,7 @@ jobs:
           IMAGE_NAME: ${{ needs.deploy_aws_infrastructure.outputs.image_name }}
         if: env.repo_name != env.IMAGE_NAME
         run: |
-          aws ecr create-repository --repository-name ${{ env.IMAGE_NAME }}  
+          aws ecr create-repository --repository-name ${{ env.IMAGE_NAME }}
 
 
   # Start self-hosted EC2 runner
@@ -202,7 +201,7 @@ jobs:
         with:
           mode: start
           github-token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
-          ec2-image-id: ami-0350c66360f8803ef
+          ec2-image-id: ami-073788816dc8fccb4
           ec2-instance-type: t2.micro
           subnet-id: ${{ needs.deploy_aws_infrastructure.outputs.private_data_subnet_az1_id }}
           security-group-id: ${{ needs.deploy_aws_infrastructure.outputs.runner_security_group_id }}
@@ -215,7 +214,9 @@ jobs:
     outputs:
       label: ${{ steps.start-ec2-runner.outputs.label }}
       ec2-instance-id: ${{ steps.start-ec2-runner.outputs.ec2-instance-id }}
-   # Build and push Docker image to ECR
+
+
+  # Build and push Docker image to ECR
   build_and_push_image:
     name: Build and push Docker image to ECR
     needs:
@@ -228,7 +229,7 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
-      
+
       - name: Login to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v1
 
@@ -263,3 +264,172 @@ jobs:
           IMAGE_NAME: ${{ needs.deploy_aws_infrastructure.outputs.image_name }}
         run: |
           docker push ${{ secrets.ECR_REGISTRY }}/${{ env.IMAGE_NAME }}
+
+
+  # Create environment file and export to S3 
+  export_env_variables:
+    name: Create environment file and export to S3 
+    needs:
+      - configure_aws_credentials
+      - deploy_aws_infrastructure
+      - start_runner
+      - build_and_push_image
+    if: needs.deploy_aws_infrastructure.outputs.terraform_action != 'destroy'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Export environment variable values to file
+        env:
+          DOMAIN_NAME: ${{ needs.deploy_aws_infrastructure.outputs.domain_name }}
+          RDS_ENDPOINT: ${{ needs.deploy_aws_infrastructure.outputs.rds_endpoint }}
+          ENVIRONMENT_FILE_NAME: ${{ needs.deploy_aws_infrastructure.outputs.environment_file_name }}
+        run: |
+          echo "PERSONAL_ACCESS_TOKEN=${{ secrets.PERSONAL_ACCESS_TOKEN }}" > ${{ env.ENVIRONMENT_FILE_NAME }}
+          echo "GITHUB_USERNAME=${{ env.GITHUB_USERNAME }}" >> ${{ env.ENVIRONMENT_FILE_NAME }}
+          echo "REPOSITORY_NAME=${{ env.REPOSITORY_NAME }}" >> ${{ env.ENVIRONMENT_FILE_NAME }}
+          echo "WEB_FILE_ZIP=${{ env.WEB_FILE_ZIP }}" >> ${{ env.ENVIRONMENT_FILE_NAME }}
+          echo "WEB_FILE_UNZIP=${{ env.WEB_FILE_UNZIP }}" >> ${{ env.ENVIRONMENT_FILE_NAME }}
+          echo "DOMAIN_NAME=${{ env.DOMAIN_NAME }}" >> ${{ env.ENVIRONMENT_FILE_NAME }}
+          echo "RDS_ENDPOINT=${{ env.RDS_ENDPOINT }}" >> ${{ env.ENVIRONMENT_FILE_NAME }}
+          echo "RDS_DB_NAME=${{ secrets.RDS_DB_NAME }}" >> ${{ env.ENVIRONMENT_FILE_NAME }}
+          echo "RDS_DB_USERNAME=${{ secrets.RDS_DB_USERNAME }}" >> ${{ env.ENVIRONMENT_FILE_NAME }}
+          echo "RDS_DB_PASSWORD=${{ secrets.RDS_DB_PASSWORD }}" >> ${{ env.ENVIRONMENT_FILE_NAME }}
+
+      - name: Upload environment file to S3
+        env:
+          ENVIRONMENT_FILE_NAME: ${{ needs.deploy_aws_infrastructure.outputs.environment_file_name }}
+          ENV_FILE_BUCKET_NAME: ${{ needs.deploy_aws_infrastructure.outputs.env_file_bucket_name }}
+        run: aws s3 cp ${{ env.ENVIRONMENT_FILE_NAME }} s3://${{ env.ENV_FILE_BUCKET_NAME }}/${{ env.ENVIRONMENT_FILE_NAME }}
+
+
+  # Migrate data into RDS database with Flyway
+  migrate_data:
+    name: Migrate data into RDS database with Flyway
+    needs:
+      - deploy_aws_infrastructure
+      - start_runner
+      - build_and_push_image
+    if: needs.deploy_aws_infrastructure.outputs.terraform_action != 'destroy'
+    runs-on: self-hosted
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Download Flyway
+        run: |
+          wget -qO- https://repo1.maven.org/maven2/org/flywaydb/flyway-commandline/${{ env.FLYWAY_VERSION }}/flyway-commandline-${{ env.FLYWAY_VERSION }}-linux-x64.tar.gz | tar xvz && sudo ln -s `pwd`/flyway-${{ env.FLYWAY_VERSION }}/flyway /usr/local/bin 
+
+      - name: Remove the placeholder (sql) directory
+        run: |
+          rm -rf flyway-${{ env.FLYWAY_VERSION }}/sql/
+
+      - name: Copy the sql folder into the Flyway sub-directory
+        run: |
+          cp -r sql flyway-${{ env.FLYWAY_VERSION }}/
+
+      - name: Run Flyway migrate command
+        env:
+          FLYWAY_URL: jdbc:mysql://${{ needs.deploy_aws_infrastructure.outputs.rds_endpoint }}:3306/${{ secrets.RDS_DB_NAME }}
+          FLYWAY_USER: ${{ secrets.RDS_DB_USERNAME }}
+          FLYWAY_PASSWORD: ${{ secrets.RDS_DB_PASSWORD }}
+          FLYWAY_LOCATION: filesystem:sql
+        working-directory: ./flyway-${{ env.FLYWAY_VERSION }}
+        run: |
+          flyway -url=${{ env.FLYWAY_URL }} \
+            -user=${{ env.FLYWAY_USER }} \
+            -password=${{ env.FLYWAY_PASSWORD }} \
+            -locations=${{ env.FLYWAY_LOCATION }} migrate
+
+
+  # Stop the self-hosted EC2 runner
+  stop_runner:
+    name: Stop self-hosted EC2 runner
+    needs:
+      - configure_aws_credentials
+      - deploy_aws_infrastructure
+      - start_runner
+      - build_and_push_image
+      - export_env_variables
+      - migrate_data
+    if: needs.deploy_aws_infrastructure.outputs.terraform_action != 'destroy' && always() 
+    runs-on: ubuntu-latest
+    steps:
+      - name: Stop EC2 runner
+        uses: machulav/ec2-github-runner@v2
+        with:
+          mode: stop
+          github-token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+          label: ${{ needs.start_runner.outputs.label }}
+          ec2-instance-id: ${{ needs.start_runner.outputs.ec2-instance-id }}
+
+
+  # Create new task definition revision
+  create_td_revision:
+    name: Create new task definition revision
+    needs: 
+      - configure_aws_credentials
+      - deploy_aws_infrastructure 
+      - create_ecr_repository
+      - start_runner
+      - build_and_push_image
+      - export_env_variables
+      - migrate_data
+      - stop_runner
+    if: needs.deploy_aws_infrastructure.outputs.terraform_action != 'destroy'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create new task definition revision
+        env:
+          ECS_FAMILY: ${{ needs.deploy_aws_infrastructure.outputs.task_definition_name }}
+          ECS_IMAGE: ${{ secrets.ECR_REGISTRY }}/${{ needs.deploy_aws_infrastructure.outputs.image_name }}:${{ needs.deploy_aws_infrastructure.outputs.image_tag }}
+        run: |
+          # Get existing task definition
+          TASK_DEFINITION=$(aws ecs describe-task-definition --task-definition ${{ env.ECS_FAMILY }})
+
+          # update the existing task definition by performing the following actions:
+          # 1. Update the `containerDefinitions[0].image` to the new image we want to deploy
+          # 2. Remove fields from the task definition that are not compatibile with `register-task-definition` --cli-input-json
+          NEW_TASK_DEFINITION=$(echo "$TASK_DEFINITION" | jq --arg IMAGE "${{ env.ECS_IMAGE }}" '.taskDefinition | .containerDefinitions[0].image = $IMAGE | del(.taskDefinitionArn) | del(.revision) | del(.status) | del(.requiresAttributes) | del(.compatibilities) | del(.registeredAt) | del(.registeredBy)')
+
+          # Register the new task definition and capture the output as JSON
+          NEW_TASK_INFO=$(aws ecs register-task-definition --cli-input-json "$NEW_TASK_DEFINITION")
+
+          # Grab the new revision from the output
+          NEW_TD_REVISION=$(echo "$NEW_TASK_INFO" | jq '.taskDefinition.revision')
+
+          # Set the new revision as an environment variable
+          echo "NEW_TD_REVISION=$NEW_TD_REVISION" >> $GITHUB_ENV
+
+    outputs:
+      new_td_revision: ${{ env.NEW_TD_REVISION }}
+
+
+  # Restart ECS Fargate service
+  restart_ecs_service:
+    name: Restart ECS Fargate service
+    needs: 
+      - configure_aws_credentials
+      - deploy_aws_infrastructure 
+      - create_ecr_repository
+      - start_runner
+      - build_and_push_image
+      - export_env_variables
+      - migrate_data
+      - stop_runner
+      - create_td_revision
+    if: needs.deploy_aws_infrastructure.outputs.terraform_action != 'destroy'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Update ECS Service
+        env:
+          ECS_CLUSTER_NAME: ${{ needs.deploy_aws_infrastructure.outputs.ecs_cluster_name }}
+          ECS_SERVICE_NAME: ${{ needs.deploy_aws_infrastructure.outputs.ecs_service_name }}
+          TD_NAME: ${{  needs.deploy_aws_infrastructure.outputs.task_definition_name }}
+        run: |
+          aws ecs update-service --cluster ${{ env.ECS_CLUSTER_NAME }} --service ${{ env.ECS_SERVICE_NAME }} --task-definition ${{ env.TD_NAME }}:${{ needs.create_td_revision.outputs.new_td_revision }} --force-new-deployment
+
+      - name: Wait for ECS service to become stable
+        env:
+          ECS_CLUSTER_NAME: ${{ needs.deploy_aws_infrastructure.outputs.ecs_cluster_name }}
+          ECS_SERVICE_NAME: ${{ needs.deploy_aws_infrastructure.outputs.ecs_service_name }}
+        run: |
+          aws ecs wait services-stable --cluster ${{ env.ECS_CLUSTER_NAME }} --services ${{ env.ECS_SERVICE_NAME }}
