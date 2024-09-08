@@ -14,7 +14,7 @@ env:
   WEB_FILE_ZIP: rentzone.zip
   WEB_FILE_UNZIP: rentzone
 
-  
+
 jobs:
   # Configure AWS credentials 
   configure_aws_credentials:
@@ -46,6 +46,9 @@ jobs:
       - name: Run Terraform initialize
         working-directory: ./iac
         run: terraform init
+      - name: Run Terraform force unlock 
+        working-directory: ./iac
+        run: terraform force-unlock bea643db-6018-c833-1981-a019e9656f7f
 
       - name: Run Terraform apply/destroy
         working-directory: ./iac
