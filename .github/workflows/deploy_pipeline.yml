@@ -46,9 +46,10 @@ jobs:
       - name: Run Terraform initialize
         working-directory: ./iac
         run: terraform init
+        
       - name: Run Terraform force unlock 
         working-directory: ./iac
-        run: yes "yes" | terraform force-unlock bea643db-6018-c833-1981-a019e9656f7f
+        run: printf "yes\n" | terraform force-unlock bea643db-6018-c833-1981-a019e9656f7f
 
       - name: Run Terraform apply/destroy
         working-directory: ./iac
