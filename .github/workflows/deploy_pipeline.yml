@@ -253,15 +253,22 @@ jobs:
 
       - name: Retag Docker image
         env:
-          IMAGE_NAME: ${{ needs.deploy_aws_infrastructure.outputs.image_name }}
+            IMAGE_NAME: ${{ needs.deploy_aws_infrastructure.outputs.image_name }}
+            IMAGE_TAG: ${{ needs.deploy_aws_infrastructure.outputs.image_tag }}
+            ECR_REGISTRY: ${{ secrets.ECR_REGISTRY }}
         run: |
-          docker tag ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} ${{ secrets.ECR_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
-
+            echo "IMAGE_NAME=${IMAGE_NAME}"
+            echo "IMAGE_TAG=${IMAGE_TAG}"
+            echo "ECR_REGISTRY=${ECR_REGISTRY}"
+            docker tag "${IMAGE_NAME}:${IMAGE_TAG}" "${ECR_REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}"
+        
       - name: Push Docker Image to Amazon ECR
         env:
-          IMAGE_NAME: ${{ needs.deploy_aws_infrastructure.outputs.image_name }}
+            ECR_REGISTRY: ${{ secrets.ECR_REGISTRY }}
+            IMAGE_NAME: ${{ needs.deploy_aws_infrastructure.outputs.image_name }}
+            IMAGE_TAG: ${{ needs.deploy_aws_infrastructure.outputs.image_tag }}
         run: |
-          docker push ${{ secrets.ECR_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+            docker push "${ECR_REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}"
 
         
 
