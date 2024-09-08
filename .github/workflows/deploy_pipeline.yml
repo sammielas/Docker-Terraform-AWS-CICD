@@ -22,8 +22,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Configure AWS credentials
-        env:
-          ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: true  # Add this line
         uses: aws-actions/configure-aws-credentials@v1-node16
         with:
           aws-access-key-id: ${{ env.AWS_ACCESS_KEY_ID }}
