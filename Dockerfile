@@ -82,8 +82,7 @@ RUN echo "GITHUB_USERNAME: $GITHUB_USERNAME" && \
 # Clone the GitHub repository
 RUN git clone https://$PERSONAL_ACCESS_TOKEN@github.com/$GITHUB_USERNAME/$REPOSITORY_NAME.git
 
-# Display the git clone log file to show the output
-RUN cat git_clone_output.log
+
 
 # Unzip the zip folder containing the web files
 RUN unzip $REPOSITORY_NAME/$WEB_FILE_ZIP -d $REPOSITORY_NAME/
