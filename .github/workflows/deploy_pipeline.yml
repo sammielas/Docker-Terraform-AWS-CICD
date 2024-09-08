@@ -22,6 +22,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Configure AWS credentials
+        env:
+          ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: true  # Add this line
         uses: aws-actions/configure-aws-credentials@v1-node16
         with:
           aws-access-key-id: ${{ env.AWS_ACCESS_KEY_ID }}
@@ -228,16 +230,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
-      
-      - name: Set environment variable to allow  Node version 16 workaround
-        env:
-          ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: true
-        run: echo "Allowing insecure Node version"
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v2
-        with:
-          node-version: '16'
       
       - name: Login to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v1
