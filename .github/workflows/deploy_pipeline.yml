@@ -14,7 +14,6 @@ env:
   WEB_FILE_ZIP: rentzone.zip
   WEB_FILE_UNZIP: rentzone
 
-
 jobs:
   # Configure AWS credentials 
   configure_aws_credentials:
