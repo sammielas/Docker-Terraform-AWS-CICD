@@ -90,7 +90,6 @@ RUN unzip $REPOSITORY_NAME/$WEB_FILE_ZIP -d $REPOSITORY_NAME/
 
 # Copy the web files into the HTML directory
 RUN cp -av $REPOSITORY_NAME/$WEB_FILE_UNZIP/. /var/www/html
-
 # Remove the repository we cloned
 RUN rm -rf $REPOSITORY_NAME
 
