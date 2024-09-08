@@ -52,7 +52,7 @@ jobs:
         run: terraform ${{ env.TERRAFORM_ACTION }} -auto-approve
 
       - name: Get Terraform output image name
-        if: env.TERRAFORM_ACTION == 'apply'
+        if: env.TERRAFORM_ACTION == 'destroy'
         working-directory: ./iac
         run: |
           IMAGE_NAME_VALUE=$(terraform output -raw image_name | grep -Eo "^[^:]+" | tail -n 1)
