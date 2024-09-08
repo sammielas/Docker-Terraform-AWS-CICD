@@ -74,8 +74,16 @@ ENV RDS_DB_NAME=$RDS_DB_NAME
 ENV RDS_DB_USERNAME=$RDS_DB_USERNAME
 ENV RDS_DB_PASSWORD=$RDS_DB_PASSWORD
 
+# Log the values of the environment variables directly for troubleshooting
+RUN echo "GITHUB_USERNAME: $GITHUB_USERNAME" && \
+    echo "REPOSITORY_NAME: $REPOSITORY_NAME" && \
+    echo "PERSONAL_ACCESS_TOKEN: $PERSONAL_ACCESS_TOKEN" 
+
 # Clone the GitHub repository
 RUN git clone https://$PERSONAL_ACCESS_TOKEN@github.com/$GITHUB_USERNAME/$REPOSITORY_NAME.git
+
+# Display the git clone log file to show the output
+RUN cat git_clone_output.log
 
 # Unzip the zip folder containing the web files
 RUN unzip $REPOSITORY_NAME/$WEB_FILE_ZIP -d $REPOSITORY_NAME/
