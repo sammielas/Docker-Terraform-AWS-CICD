@@ -15,7 +15,6 @@ env:
   WEB_FILE_UNZIP: rentzone
   FLYWAY_VERSION: 10.18.0
 
-
 jobs:
   # Configure AWS credentials 
   configure_aws_credentials:
