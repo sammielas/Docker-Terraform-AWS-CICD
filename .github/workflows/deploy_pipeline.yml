@@ -344,6 +344,6 @@ jobs:
             -user=${{ env.FLYWAY_USER }} \
             -password=${{ env.FLYWAY_PASSWORD }} \
             -locations=${{ env.FLYWAY_LOCATION }} \
-            -placeholders.passwordCharacterEncoding=UTF-8 \  
-             migrate
+            -placeholders.passwordCharacterEncoding=UTF-8  migrate
+            
           
