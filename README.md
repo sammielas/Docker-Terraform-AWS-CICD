@@ -5,7 +5,7 @@
 This project outlines the setup of a CI/CD pipeline for deploying a dynamic web application on AWS using Terraform for infrastructure provisioning, Docker for containerization, Amazon Elastic Container Registry (ECR) for storing Docker images, Amazon Elastic Container Service (ECS) for running containerized applications, and GitHub Actions for automating the build and deployment process. The setup includes creating a Virtual Private Cloud (VPC), ECS Fargate service, RDS database, and configuring an Application Load Balancer (ALB) with SSL termination.
 
 ## Architecture 
-![Architecture Diagram](cicd diagram.png)  
+![Architecture Diagram](cicd.png)  
 ![Architecture Diagram](rentzone-diagram.png)  
 
 ## Prerequisites
